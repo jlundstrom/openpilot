@@ -168,6 +168,11 @@ class CarState(CarStateBase):
     self.cruise_setting = 0
     self.v_cruise_pcm_prev = 0
 
+    self.sPrev = 0
+    self.bPrev = 0
+    self.alpha = .2
+    self.beta = .1
+
   def update(self, cp, cp_cam, cp_body):
     ret = car.CarState.new_message()
 
@@ -241,9 +246,14 @@ class CarState(CarStateBase):
 
     if self.CP.enableGasInterceptor:
       ret.gas = (cp.vl["GAS_SENSOR"]["INTERCEPTOR_GAS"] + cp.vl["GAS_SENSOR"]["INTERCEPTOR_GAS2"]) / 2.
+      sNext = self.alpha * ret.gas + (1 - self.alpha) * (self.sPrev + self.bPrev)
+      bNext = self.beta * (sNext - self.sPrev) + (1 - self.beta) * self.bPrev
+      self.sPrev = sNext
+      self.bNext = bNext
+      ret.gasPressed = sNext > 0
     else:
       ret.gas = cp.vl["POWERTRAIN_DATA"]["PEDAL_GAS"]
-    ret.gasPressed = ret.gas > 1e-5
+      ret.gasPressed = ret.gas > 1e-5
 
     ret.steeringTorque = cp.vl["STEER_STATUS"]["STEER_TORQUE_SENSOR"]
     ret.steeringTorqueEps = cp.vl["STEER_MOTOR_TORQUE"]["MOTOR_TORQUE"]
